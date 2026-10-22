@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Qarzlarim v2.5 · Neon Ledger</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:#020208; color:#e0e0ff; font-family:'Share Tech Mono',monospace; min-height:100vh; padding:20px 16px 80px; overflow-x:hidden; }
+  body::before { content:''; position:fixed; inset:0; background-image:linear-gradient(rgba(0,255,255,0.07) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,255,0.07) 1px,transparent 1px); background-size:40px 40px; animation:gridMove 20s linear infinite; pointer-events:none; z-index:0; }
+  body::after { content:''; position:fixed; inset:0; background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.15) 2px,rgba(0,0,0,0.15) 4px); pointer-events:none; z-index:0; }
+  @keyframes gridMove { 0%{background-position:0 0} 100%{background-position:40px 40px} }
+  .content { position:relative; z-index:1; }
+  header { text-align:center; padding:30px 0 24px; margin-bottom:24px; }
+  header h1 { font-family:'Orbitron',sans-serif; font-size:22px; font-weight:900; color:#0ff; text-shadow:0 0 7px #0ff,0 0 21px #0ff,0 0 42px #0ff; letter-spacing:4px; animation:flicker 4s infinite; }
+  header p { font-size:10px; color:rgba(0,255,255,0.4); letter-spacing:3px; margin-top:6px; }
+  @keyframes flicker { 0%,19%,21%,23%,25%,54%,56%,100%{opacity:1} 20%,24%,55%{opacity:0.6} }
+  .total-box { border-radius:16px; padding:24px 20px; margin-bottom:28px; text-align:center; position:relative; background:rgba(0,255,255,0.03); border:1px solid rgba(0,255,255,0.3); box-shadow:0 0 20px rgba(0,255,255,0.1),inset 0 0 30px rgba(0,255,255,0.03); overflow:hidden; }
+  .total-box::before { content:''; position:absolute; top:-50%;left:-50%; width:200%;height:200%; background:conic-gradient(from 0deg,transparent 0deg,rgba(0,255,255,0.05) 60deg,transparent 120deg); animation:rotate 6s linear infinite; }
+  @keyframes rotate { to{transform:rotate(360deg)} }
+  .total-label { font-size:10px; color:rgba(0,255,255,0.5); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; position:relative; }
+  .total-amount { font-family:'Orbitron',sans-serif; font-size:24px; font-weight:900; color:#ff3366; text-shadow:0 0 7px #ff3366,0 0 21px #ff3366; position:relative; }
+  .section { margin-bottom:16px; border-radius:12px; overflow:hidden; position:relative; }
+  .section-header { display:flex; align-items:center; justify-content:space-between; padding:14px 16px; cursor:pointer; user-select:none; position:relative; }
+  .section-title { font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; letter-spacing:2px; }
+  .chevron { font-size:10px; transition:transform 0.3s; display:inline-block; margin-left:8px; }
+  .chevron.open { transform:rotate(180deg); }
+  .section-body { display:none; padding:12px; background:rgba(0,0,0,0.7); border-top:1px solid #333; }
+  .section-body.open { display:block; }
+  .debt-item { display:flex; align-items:center; justify-content:space-between; padding:12px; border-radius:8px; margin-bottom:8px; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.06); gap:10px; position:relative; overflow:hidden; }
+  .debt-item::before { content:''; position:absolute; left:0;top:0;bottom:0; width:2px; background:var(--ic,#0ff); box-shadow:0 0 8px var(--ic,#0ff); }
+  .debt-info { flex:1; min-width:0; padding-left:8px; }
+  .debt-name { font-size:11px; color:rgba(255,255,255,0.35); margin-bottom:4px; }
+  .debt-amount { font-family:'Orbitron',sans-serif; font-size:13px; font-weight:700; color:#e0e0ff; }
+  .debt-date { font-size:10px; margin-top:4px; padding:2px 8px; border-radius:20px; display:inline-block; letter-spacing:1px; }
+  .urgent { background:rgba(255,51,102,0.15); color:#ff3366; border:1px solid rgba(255,51,102,0.3); animation:pulse-urgent 2s infinite; }
+  .soon { background:rgba(255,170,0,0.12); color:#ffaa00; border:1px solid rgba(255,170,0,0.25); }
+  .later { background:rgba(100,100,150,0.12); color:#8888aa; border:1px solid rgba(100,100,150,0.2); }
+  @keyframes pulse-urgent { 0%,100%{box-shadow:0 0 5px rgba(255,51,102,0.2)} 50%{box-shadow:0 0 15px rgba(255,51,102,0.5)} }
+  .debt-actions { display:flex; flex-direction:column; gap:5px; flex-shrink:0; }
+  .btn-edit,.btn-delete { border:1px solid; border-radius:5px; padding:5px 10px; font-size:10px; cursor:pointer; font-family:'Share Tech Mono',monospace; background:transparent; letter-spacing:1px; }
+  .btn-edit { color:#ffaa00; border-color:rgba(255,170,0,0.4); }
+  .btn-delete { color:#ff3366; border-color:rgba(255,51,102,0.4); }
+  .add-btn { width:100%; padding:10px; background:transparent; border:1px dashed rgba(0,255,136,0.4); border-radius:8px; color:#00ff88; font-family:'Share Tech Mono',monospace; font-size:11px; cursor:pointer; margin-top:6px; letter-spacing:2px; }
+  .empty { text-align:center; color:rgba(255,255,255,0.2); font-size:11px; padding:20px; letter-spacing:2px; }
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,20,0.9); z-index:100; align-items:center; justify-content:center; padding:20px; backdrop-filter:blur(4px); }
+  .modal-overlay.open { display:flex; }
+  .modal { background:#000814; border:1px solid rgba(0,255,255,0.3); border-radius:16px; padding:28px; width:100%; max-width:380px; box-shadow:0 0 30px rgba(0,255,255,0.1); position:relative; overflow:hidden; }
+  .modal::before { content:''; position:absolute; top:0;left:0;right:0; height:1px; background:linear-gradient(90deg,transparent,#0ff,transparent); }
+  .modal h3 { font-family:'Orbitron',sans-serif; font-size:13px; margin-bottom:22px; color:#0ff; text-shadow:0 0 10px #0ff; letter-spacing:2px; }
+  .form-group { margin-bottom:16px; }
+  .form-group label { display:block; font-size:10px; color:rgba(0,255,255,0.5); margin-bottom:7px; letter-spacing:2px; text-transform:uppercase; }
+  .form-group input,.form-group select { width:100%; background:rgba(0,255,255,0.04); border:1px solid rgba(0,255,255,0.2); border-radius:8px; padding:10px 14px; color:#e0e0ff; font-family:'Share Tech Mono',monospace; font-size:13px; outline:none; }
+  .form-group input:focus,.form-group select:focus { border-color:rgba(0,255,255,0.6); }
+  .form-group select option { background:#000814; }
+  .modal-btns { display:flex; gap:10px; margin-top:22px; }
+  .btn-save { flex:1; padding:12px; background:rgba(0,255,255,0.1); border:1px solid rgba(0,255,255,0.5); border-radius:8px; color:#0ff; font-family:'Orbitron',sans-serif; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:2px; }
+  .btn-cancel { flex:1; padding:12px; background:transparent; border:1px solid rgba(255,255,255,0.1); border-radius:8px; color:rgba(255,255,255,0.3); font-family:'Share Tech Mono',monospace; font-size:11px; cursor:pointer; }
+  .toast { position:fixed; bottom:30px; left:50%; transform:translateX(-50%); background:rgba(0,255,136,0.15); border:1px solid rgba(0,255,136,0.4); color:#00ff88; padding:10px 24px; border-radius:30px; font-size:12px; letter-spacing:2px; z-index:200; display:none; }
+  .monthly-box { border-radius:16px; padding:20px 18px; margin-bottom:28px; text-align:center; position:relative; background:rgba(255,170,0,0.03); border:1px solid rgba(255,170,0,0.3); box-shadow:0 0 20px rgba(255,170,0,0.08),inset 0 0 30px rgba(255,170,0,0.03); overflow:hidden; }
+  .monthly-label { font-size:10px; color:rgba(255,170,0,0.6); letter-spacing:3px; text-transform:uppercase; margin-bottom:10px; }
+  .monthly-amount { font-family:'Orbitron',sans-serif; font-size:20px; font-weight:900; color:#ffaa00; text-shadow:0 0 7px #ffaa00,0 0 21px #ffaa00; }
+  .monthly-sub { font-size:9px; color:rgba(255,255,255,0.3); letter-spacing:1px; margin-top:4px; }
+  .monthly-trend { margin-top:12px; font-size:11px; letter-spacing:1px; padding:6px 10px; border-radius:8px; display:inline-block; }
+  .monthly-trend.up { color:#ff3366; background:rgba(255,51,102,0.1); border:1px solid rgba(255,51,102,0.3); }
+  .monthly-trend.down { color:#00ff88; background:rgba(0,255,136,0.1); border:1px solid rgba(0,255,136,0.3); }
+  .monthly-trend.flat { color:#8888aa; background:rgba(100,100,150,0.1); border:1px solid rgba(100,100,150,0.2); }
+  .monthly-breakdown { margin-top:16px; border-top:1px solid rgba(255,170,0,0.15); padding-top:12px; text-align:left; }
+  .monthly-row { display:flex; align-items:center; justify-content:space-between; padding:6px 2px; font-size:11px; }
+  .monthly-row-name { color:rgba(255,255,255,0.55); letter-spacing:1px; }
+  .monthly-row-amount { font-family:'Orbitron',sans-serif; font-weight:700; }
+  .monthly-empty { text-align:center; color:rgba(255,255,255,0.2); font-size:10px; padding:6px; letter-spacing:2px; }
+  .home-link { display:inline-block; margin-top:12px; font-size:10px; letter-spacing:2px; color:rgba(0,255,255,0.65); border:1px solid rgba(0,255,255,0.3); border-radius:20px; padding:6px 16px; text-decoration:none; background:rgba(0,255,255,0.04); }
+  .home-link:active { background:rgba(0,255,255,0.15); }
+  .toast.show { display:block; animation:fadeInOut 2s forwards; }
+  @keyframes fadeInOut { 0%{opacity:0;transform:translateX(-50%) translateY(10px)} 20%{opacity:1;transform:translateX(-50%) translateY(0)} 80%{opacity:1} 100%{opacity:0} }
+  .loading { text-align:center; color:rgba(0,255,255,0.5); font-size:12px; padding:40px; letter-spacing:3px; }
+  .manage-btn { display:inline-flex; align-items:center; gap:6px; margin-top:10px; margin-left:8px; font-size:10px; letter-spacing:2px; color:rgba(255,170,0,0.75); border:1px solid rgba(255,170,0,0.35); border-radius:20px; padding:6px 16px; background:rgba(255,170,0,0.05); cursor:pointer; font-family:'Share Tech Mono',monospace; }
+  .manage-btn:active { background:rgba(255,170,0,0.15); }
+  .sec-row { display:flex; align-items:center; gap:10px; padding:10px 8px; border-bottom:1px solid rgba(255,255,255,0.06); }
+  .sec-row:last-child { border-bottom:none; }
+  .sec-swatch { width:14px; height:14px; border-radius:50%; flex-shrink:0; box-shadow:0 0 6px var(--sw,#0ff); background:var(--sw,#0ff); }
+  .sec-row-name { flex:1; min-width:0; font-size:12px; color:#e0e0ff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .sec-row-name.editing { display:none; }
+  .sec-row input.sec-name-input { display:none; flex:1; min-width:0; background:rgba(0,255,255,0.04); border:1px solid rgba(0,255,255,0.25); border-radius:6px; padding:6px 8px; color:#e0e0ff; font-family:'Share Tech Mono',monospace; font-size:12px; outline:none; }
+  .sec-row.editing .sec-row-name { display:none; }
+  .sec-row.editing input.sec-name-input { display:block; }
+  .sec-row-count { font-size:9px; color:rgba(255,255,255,0.25); letter-spacing:1px; flex-shrink:0; }
+  .sec-icon-btn { border:1px solid; border-radius:5px; padding:4px 8px; font-size:10px; cursor:pointer; background:transparent; flex-shrink:0; font-family:'Share Tech Mono',monospace; }
+  .sec-icon-btn.rename { color:#ffaa00; border-color:rgba(255,170,0,0.4); }
+  .sec-icon-btn.del { color:#ff3366; border-color:rgba(255,51,102,0.4); }
+  .sec-icon-btn.confirm { color:#00ff88; border-color:rgba(0,255,136,0.4); }
+  .add-sec-row { display:flex; gap:8px; margin-top:14px; align-items:center; }
+  .add-sec-row input[type="text"] { flex:1; min-width:0; background:rgba(0,255,255,0.04); border:1px solid rgba(0,255,255,0.2); border-radius:8px; padding:9px 12px; color:#e0e0ff; font-family:'Share Tech Mono',monospace; font-size:12px; outline:none; }
+  .add-sec-row input[type="color"] { width:36px; height:36px; border:1px solid rgba(0,255,255,0.2); border-radius:8px; background:transparent; padding:2px; flex-shrink:0; }
+  .sec-hint { font-size:9px; color:rgba(255,255,255,0.25); letter-spacing:1px; margin-top:10px; text-align:center; }
+  .history-panel{margin:14px 0;padding:15px;border:1px solid rgba(0,255,255,.25);border-radius:12px;background:rgba(0,255,255,.035)}
+  .history-entry{padding:9px 0;border-bottom:1px solid #243040;font-size:11px;line-height:1.7}
+  .history-entry:last-child{border:0}
+  .extra-actions{display:flex;gap:5px;flex-wrap:wrap;margin-top:7px}
+  .extra-actions button{background:#071526;color:#00ffdd;border:1px solid #176677;border-radius:7px;padding:7px;font-size:10px}
+  .closed{opacity:.6}
+
+/* v2.2 extended neon UI */
+:root{color-scheme:dark}
+button{cursor:pointer;touch-action:manipulation}button:disabled{opacity:.42;cursor:not-allowed}
+.toolstrip{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:center;margin-top:12px}
+.toolbtn{background:rgba(0,255,255,.055);border:1px solid rgba(0,255,255,.35);color:#7dffff;padding:9px 13px;border-radius:11px;font:11px 'Share Tech Mono',monospace;letter-spacing:.5px}
+.toolbtn.warn{color:#ffc071;border-color:rgba(255,170,0,.35)}
+.panel{border:1px solid rgba(0,255,255,.23);border-radius:15px;background:rgba(0,255,255,.025);padding:18px;margin:0 0 17px;box-shadow:inset 0 0 25px rgba(0,255,255,.025)}
+.panel h2{font:700 12px 'Orbitron',sans-serif;color:#86fbff;letter-spacing:1.4px;margin:0 0 12px}
+.panel small,.dim{font-size:10px;line-height:1.65;color:#939db7}
+.panel-row{display:flex;justify-content:space-between;gap:12px;align-items:center;margin:9px 0;font-size:12px}
+.panel-row strong{color:#e2efff;text-align:right}
+.pill{font-size:9px;border-radius:99px;border:1px solid rgba(0,255,255,.26);padding:4px 8px;color:#80edff;white-space:nowrap}
+.pill.danger{border-color:#9d334d;color:#ff798c}.pill.good{border-color:#1f8a67;color:#3fffb4}
+.progress-track{height:12px;border:1px solid rgba(0,255,255,.22);background:#0a1426;border-radius:99px;overflow:hidden;margin:14px 0 6px}
+.progress-fill{height:100%;width:0;background:linear-gradient(90deg,#00b5f6,#00ffa2);box-shadow:0 0 13px #00ffee;transition:width .4s}
+.insight-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:18px}
+.insight-grid .panel{margin-bottom:0;min-width:0}
+.mini-stat{font:700 15px 'Orbitron',sans-serif;color:#f5fbff;margin-top:8px;overflow-wrap:anywhere}
+.section-title{overflow-wrap:anywhere}
+.debt-item{align-items:flex-start;flex-wrap:wrap}
+.debt-info{flex:1 1 190px}
+.debt-meta{font-size:10px;color:#98abc0;line-height:1.8;margin-top:5px;overflow-wrap:anywhere}
+.debt-actions{flex-direction:row;flex-wrap:wrap}
+.debt-actions button{min-width:52px}
+.extra-actions button{border:1px solid #176677}
+#sectionsContainer{margin-top:12px}
+.list-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid rgba(255,255,255,.075);font-size:11px}
+.list-row:first-child{border-top:0}.list-row .left{min-width:0;overflow-wrap:anywhere;line-height:1.6}
+.list-row .right{flex-shrink:0;text-align:right;max-width:45%}
+.action-mini{background:transparent;color:#7effdc;border:1px solid #18785b;border-radius:7px;padding:5px 8px;font-size:10px;margin-top:4px}
+.history-title{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.notice{font-size:10px;color:#e8c998;line-height:1.6;margin:8px 0}
+.modal-overlay{overflow-y:auto;align-items:flex-start;padding:22px 14px}
+.modal{max-width:510px;margin:auto;max-height:none;padding:21px}
+.modal h3{line-height:1.6;margin-bottom:14px}
+.form-group{margin-bottom:13px}.form-group label{line-height:1.45}
+.form-group input,.form-group select,.form-group textarea{width:100%;background:rgba(0,255,255,.04);border:1px solid rgba(0,255,255,.2);border-radius:8px;padding:11px 12px;color:#e0e0ff;font:13px 'Share Tech Mono',monospace}
+.form-group textarea{min-height:65px;resize:vertical}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.form-grid>*{min-width:0}
+.modal-btns{position:sticky;bottom:0;background:#000814;padding-top:10px;z-index:1}
+.help-copy{font-size:11px;color:#aebbd1;line-height:1.65;margin:10px 0}
+#securityStatus{overflow-wrap:anywhere}
+@media(max-width:430px){.total-amount{font-size:20px}.insight-grid{grid-template-columns:1fr 1fr}.mini-stat{font-size:12px}.toolbtn{flex:1}.panel{padding:14px}.form-grid{grid-template-columns:1fr}.modal-btns{flex-wrap:wrap}}
+
+
+/* v2.3 -- standalone responsive tabbed interface */
+html{scroll-behavior:smooth}
+body{padding:0 0 60px;font-size:13px}
+.shell{max-width:1060px;margin:0 auto;padding:0 24px 60px}
+.app-header{padding:28px 0 24px;margin:0;text-align:left}
+.header-mark{display:flex;gap:15px;align-items:center}
+.header-icon{display:grid;place-items:center;width:56px;height:56px;border:1px solid rgba(0,255,255,.38);border-radius:16px;background:linear-gradient(145deg,rgba(0,255,255,.12),rgba(116,58,255,.13));box-shadow:0 0 20px rgba(0,255,255,.09);font-size:24px}
+.app-header h1{font-size:23px;letter-spacing:3px}
+.app-header p{font-size:10px;letter-spacing:1.5px}
+.sub-version{color:#b8aaff}
+.external-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-top:24px;padding:12px 14px;background:rgba(117,125,166,.055);border:1px solid rgba(161,168,203,.18);border-radius:13px}
+.external-label{font-size:10px;color:#8a9bb5;letter-spacing:1.3px;white-space:nowrap}
+.external-links{display:flex;flex-wrap:wrap;gap:8px}
+.external-link{display:inline-flex;align-items:center;gap:10px;min-height:35px;padding:8px 12px;color:#b9cee7;background:#10192b;border:1px solid #29364d;text-decoration:none;border-radius:9px;font-size:11px;transition:background .2s,border-color .2s}
+.external-link:hover,.external-link:focus-visible{background:#19263b;border-color:#39bbcc}
+.external-arrow{color:#72acbc}
+.workspace{min-width:0}
+.app-nav{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));align-items:stretch;gap:8px;padding:8px;margin:0 0 28px;background:rgba(8,17,32,.82);border:1px solid rgba(0,255,255,.15);border-radius:17px;box-shadow:0 12px 35px rgba(0,0,0,.15)}
+.nav-tab{display:flex;justify-content:center;align-items:center;gap:9px;min-height:53px;background:transparent;color:#8196b2;border:1px solid transparent;border-radius:11px;font-family:'Share Tech Mono',monospace;font-size:12px;transition:background .18s,color .18s,border .18s}
+.nav-tab .nav-ico{font-size:19px;line-height:1.2}
+.nav-tab.active{background:linear-gradient(135deg,rgba(0,255,245,.15),rgba(111,64,234,.14));color:#a5ffff;border-color:rgba(0,255,245,.43);box-shadow:inset 0 0 18px rgba(0,255,245,.04),0 0 13px rgba(0,255,245,.065)}
+.nav-tab:focus-visible,.inline-link:focus-visible,.shortcut-btn:focus-visible,.primary-action:focus-visible{outline:2px solid #00ffff;outline-offset:3px}
+.tab-page[hidden]{display:none!important}
+.tab-page{animation:tabFade .2s ease-out;min-width:0}
+@keyframes tabFade{from{opacity:.3;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+.page-heading{display:flex;justify-content:space-between;align-items:center;gap:18px;margin-bottom:20px}
+.page-heading .eyebrow{color:#06bfc7;font:10px 'Share Tech Mono',monospace;letter-spacing:2px;margin-bottom:5px}
+.page-heading h2{color:#effaff;font:700 19px 'Orbitron',sans-serif;letter-spacing:.6px;margin-bottom:7px;line-height:1.3}
+.page-heading p{font-size:12px;color:#9cb0c7;line-height:1.65}
+.heading-spark{font-size:34px;line-height:1;color:#21b8d5;opacity:.48;flex-shrink:0}
+.total-box{margin-bottom:15px}
+.total-amount{font-size:clamp(19px,3vw,29px);overflow-wrap:anywhere}
+.insight-grid .panel{min-height:105px}
+.overview-due .list-row{margin-top:10px}
+.inline-link{border:0;background:none;color:#55e8f1;font-family:'Share Tech Mono',monospace;font-size:12px;cursor:pointer;margin-top:13px;padding:5px 0}
+.shortcut-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.shortcut-btn{display:flex;flex-direction:column;text-align:left;gap:7px;min-width:0;padding:14px;border:1px solid rgba(0,255,255,.2);border-radius:12px;background:rgba(0,255,255,.035);font-family:'Share Tech Mono',monospace;color:#ebf9ff}
+.shortcut-btn:hover{border-color:#3cbecd;background:rgba(0,255,255,.08)}
+.shortcut-btn span{color:#00e3f4;font-size:23px}.shortcut-btn b{font-size:12px;font-weight:600}.shortcut-btn small{color:#90a8c1;font-size:10px}
+.filter-bar{display:flex;align-items:center;gap:12px;margin-bottom:17px}.filter-bar label{font-size:10px;color:#8ba1bd;letter-spacing:1px}.filter-bar select{flex:1;min-width:0;max-width:380px;padding:10px;background:#071324;color:#d9f8ff;border:1px solid rgba(0,255,255,.3);border-radius:9px;font-family:'Share Tech Mono',monospace}
+#sectionsContainer{margin-top:0}
+.note-line{margin:15px 0;padding:13px 15px;color:#8296b0;font-size:11px;line-height:1.7;border-left:2px solid rgba(0,255,255,.34);background:rgba(0,255,255,.028);border-radius:0 9px 9px 0}
+.note-line button{background:transparent;border:none;color:#76ffff;font:inherit;text-decoration:underline}
+.history-panel{margin:0 0 18px;padding:19px;border-radius:15px}
+#page-payments .monthly-box{margin-top:16px}
+#page-goal .primary-action{width:100%;padding:15px;background:linear-gradient(95deg,rgba(0,255,255,.13),rgba(101,69,255,.19));border:1px solid rgba(0,255,255,.45);border-radius:12px;color:#b9ffff;font-family:'Orbitron',sans-serif;font-size:12px;font-weight:700;letter-spacing:1px}
+.settings-group{margin-bottom:15px}.settings-actions{display:flex;gap:10px;flex-wrap:wrap}.settings-group .toolbtn{padding:12px 17px}
+@media(max-width:800px){.shell{padding:0 15px 105px}.nav-tab{gap:4px;flex-direction:column;min-height:55px;font-size:10px}.shortcut-grid{grid-template-columns:1fr 1fr}}
+@media(max-width:640px){
+ body{padding-bottom:0}
+ .shell{padding:0 16px 106px}
+ .app-header{padding:21px 0 18px}
+ .header-icon{width:48px;height:48px}
+ .app-header h1{font-size:20px}
+ .app-header p{font-size:9px}
+ .external-bar{display:block;margin-top:18px;padding:10px 12px}
+ .external-label{display:block;margin-bottom:9px;font-size:9px}
+ .external-links{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+ .external-link{padding:10px 7px;justify-content:center;gap:6px;font-size:10px;white-space:nowrap}
+ .app-nav{position:fixed;z-index:50;bottom:0;left:0;right:0;margin:0;gap:1px;padding:7px max(5px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(5px, env(safe-area-inset-left));grid-template-columns:repeat(6,minmax(0,1fr));border-radius:19px 19px 0 0;border:1px solid rgba(0,255,255,.28);border-bottom:0;background:rgba(4,11,25,.97);box-shadow:0 -12px 35px rgba(0,0,0,.65);backdrop-filter:blur(18px)}
+ .nav-tab{min-height:54px;padding:7px 0 6px;font-size:9px;gap:5px;white-space:nowrap;border-radius:9px}
+ .nav-tab .nav-ico{font-size:20px}
+ .page-heading{margin-bottom:17px}.page-heading h2{font-size:16px}.page-heading p{font-size:11px}.heading-spark{font-size:26px}
+ .insight-grid{gap:9px}.insight-grid .panel{min-height:95px}
+ .filter-bar{display:grid;grid-template-columns:1fr 1fr;gap:10px}.filter-bar label{grid-column:1/-1}.filter-bar select{width:100%}.filter-bar .toolbtn{width:100%}
+ .shortcut-btn{padding:12px}.shortcut-btn b{font-size:11px}.shortcut-btn small{font-size:9px}
+ .history-panel{padding:14px}
+ .total-box{padding:22px 12px}
+}
+@media(max-width:350px){.nav-tab{font-size:8px}.nav-tab .nav-ico{font-size:18px}.external-link{font-size:9px}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.tab-page{animation:none}}
+
+
+/* v2.5 · Penya Ledger */
+.penalty-breakdown{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px;margin:11px 0 9px}
+.penalty-metric{border:1px solid rgba(0,255,255,.15);background:rgba(0,255,255,.035);padding:9px 8px;border-radius:9px;min-width:0}
+.penalty-metric strong{display:block;color:#edfaff;font-size:11px;line-height:1.5;overflow-wrap:anywhere}
+.penalty-metric small{display:block;color:#91a7c5;font-size:9px;line-height:1.6;margin-top:3px}
+.penalty-metric.warning{border-color:rgba(255,174,75,.35);background:rgba(255,174,75,.035)}
+.penalty-metric.warning strong{color:#ffc06d}
+.penalty-footnote{font-size:10px;color:#91a7c5;line-height:1.65;margin:8px 0 10px}
+.penalty-footnote.pending{color:#ffbd7a}
+.penalty-chip{font-size:9px;line-height:1.5;display:inline-flex;padding:4px 7px;border-radius:6px;border:1px solid rgba(255,180,80,.24);color:#ffc273;background:rgba(255,180,80,.055);margin-top:7px}
+.penalty-preview{padding:14px;border-radius:11px;background:linear-gradient(120deg,rgba(0,255,255,.06),rgba(137,67,255,.06));border:1px solid rgba(0,255,255,.28);margin:8px 0 12px}
+.penalty-preview .preview-title{font:700 11px 'Orbitron',sans-serif;color:#8ffffa;margin-bottom:11px;letter-spacing:.5px}
+.preview-line{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:5px 0;font-size:11px;color:#a9bcd1}
+.preview-line b{color:#e8f8ff;overflow-wrap:anywhere;text-align:right}
+.preview-line.accent{border-top:1px solid rgba(0,255,255,.22);margin-top:6px;padding-top:12px;font-size:12px;color:#7ffff0}
+.preview-line.accent b{color:#69ffe8;font:700 14px 'Orbitron',sans-serif}
+.penalty-preview .preview-info{font-size:10px;color:#9ab0c6;line-height:1.7;margin-top:10px}
+.penalty-note{color:#e7bc7f!important;border-left:2px solid #e09b45;padding-left:10px;margin:10px 0}
+.penalty-rate-mini{color:#c6b0fa;font-size:10px;margin-top:7px;line-height:1.6}
+.extra-actions button[data-action="applyPenalty"]{border-color:rgba(255,183,82,.45);color:#ffd087;background:rgba(255,183,82,.065)}
+input:disabled{opacity:.55}
+@media(max-width:520px){.penalty-breakdown{grid-template-columns:1fr 1fr}.penalty-metric{padding:8px}.penalty-preview{padding:11px}.preview-line.accent b{font-size:12px}}
+@media(min-width:350px) and (max-width:430px){#modalOverlay .form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}#modalOverlay .form-grid label{font-size:9px;letter-spacing:.4px}#modalOverlay .form-grid input{min-width:0;padding:10px 8px}}
+
+</style>
+</head>
+<body>
+<div class="content shell">
+  <header class="app-header">
+    <div class="header-mark"><span class="header-icon">⚡</span><div><h1>QARZLARIM</h1><p>NEON LEDGER <span class="sub-version">v2.5 · PENALTY LEDGER</span></p></div></div>
+    <div class="external-bar" aria-label="Boshqa mustaqil sahifalar">
+      <span class="external-label">↗ TASHQI O‘TISHLAR</span>
+      <div class="external-links"><a class="external-link" href="https://hirokasimov.github.io/Control-Center/" target="_self"><span aria-hidden="true">⌘</span> Control Center <span class="external-arrow">↗</span></a><a class="external-link" href="index.html" target="_self"><span aria-hidden="true">⌂</span> Umumiy panel <span class="external-arrow">↗</span></a></div>
+    </div>
+  </header>
+  <div class="workspace">
+    <nav class="app-nav" aria-label="Qarzlarim bo‘limlari" role="tablist">
+      <button class="nav-tab active" type="button" role="tab" aria-selected="true" aria-controls="page-home" data-page="home"><span class="nav-ico">⌂</span><span class="nav-label">Asosiy</span></button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" aria-controls="page-debts" data-page="debts" tabindex="-1"><span class="nav-ico">▤</span><span class="nav-label">Qarzlar</span></button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" aria-controls="page-payments" data-page="payments" tabindex="-1"><span class="nav-ico">◷</span><span class="nav-label">To‘lovlar</span></button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" aria-controls="page-history" data-page="history" tabindex="-1"><span class="nav-ico">↶</span><span class="nav-label">Tarix</span></button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" aria-controls="page-goal" data-page="goal" tabindex="-1"><span class="nav-ico">◎</span><span class="nav-label">Maqsad</span></button>
+      <button class="nav-tab" type="button" role="tab" aria-selected="false" aria-controls="page-settings" data-page="settings" tabindex="-1"><span class="nav-ico">⚙</span><span class="nav-label">Sozlama</span></button>
+    </nav>
+    <main id="appMain">
+      <section class="tab-page active" id="page-home" role="tabpanel" aria-label="Asosiy sahifa">
+        <div class="page-heading"><div><div class="eyebrow">/ OVERVIEW</div><h2>Moliyaviy holat</h2><p>Hammasi bir qarashda. Qarzlarni boshqarish — alohida bo‘limlarda.</p></div><span class="heading-spark">✦</span></div>
+        <div class="total-box"><div class="total-label">[ UMUMIY QARZ · HISOBIY PENYA BILAN ]</div><div class="total-amount" id="totalAmount">Yuklanmoqda...</div></div>
+        <div class="insight-grid">
+          <div class="panel"><small>[ FAOL QARZLAR ]</small><div class="mini-stat" id="activeCount">—</div></div>
+          <div class="panel"><small>[ SHAXSIY / OILAVIY ]</small><div class="mini-stat" id="personalTotal">—</div></div>
+        </div>
+        <div class="panel overview-due"><div class="history-title"><h2>◷ ENG YAQIN TO‘LOV</h2><span class="pill" id="overviewDueBadge">—</span></div><div id="overviewDue" class="dim">Firebase ulanmoqda...</div><button class="inline-link" type="button" data-go="payments">Barcha to‘lovlarni ko‘rish →</button></div>
+        <div class="panel overview-shortcuts"><h2>TEZKOR HARAKATLAR</h2><div class="shortcut-grid"><button class="shortcut-btn" id="shortcutAdd" type="button"><span>＋</span><b>Qarz qo‘shish</b><small>Yangi majburiyat</small></button><button class="shortcut-btn" type="button" data-go="debts"><span>▤</span><b>Qarzlarni ochish</b><small>Tahrir / to‘lash</small></button><button class="shortcut-btn" type="button" data-go="history"><span>↶</span><b>Operatsiyalar</b><small>Tarix / arxiv</small></button><button class="shortcut-btn" type="button" data-go="goal"><span>◎</span><b>90% maqsad</b><small>Progressni ko‘rish</small></button></div></div>
+        <div class="note-line">Ma’lumotlar Firebase’dagi o‘zing kiritgan yozuvlarga asoslanadi, bank hisoboti emas.</div>
+      </section>
+      <section class="tab-page" id="page-debts" role="tabpanel" aria-label="Qarzlar" hidden>
+        <div class="page-heading"><div><div class="eyebrow">/ DEBTS</div><h2>Faol qarzlar</h2><p>Asosiy qarz, kunlik penya va jami qoldiqni alohida kuzat.</p></div><span class="heading-spark">▤</span></div>
+        <div class="panel filter-bar"><label for="debtFilter">KO‘RINISH</label><select id="debtFilter"><option value="all">Barcha qarzlar</option><option value="bank">Bank / servis</option><option value="personal">Shaxsiy / oilaviy</option></select><button class="toolbtn" id="btnManageSections">⚙ BO‘LIMLAR</button></div>
+        <div class="note-line">◷ Kunlik penya sahifada avtomatik hisoblanadi (Toshkent sanasi). U Firebase'ga <b>Penyani qayd etish</b> yoki <b>To‘lov</b> paytida yoziladi. Bank ilovasidagi rasmiy penya har doim ustuvor.</div><div id="sectionsContainer"><div class="loading">[ FIREBASE ULANMOQDA... ]</div></div>
+      </section>
+      <section class="tab-page" id="page-payments" role="tabpanel" aria-label="To‘lovlar taqvimi" hidden>
+        <div class="page-heading"><div><div class="eyebrow">/ SCHEDULE</div><h2>To‘lovlar taqvimi</h2><p>Qaysi qarz qachon va qancha to‘lanishi kerakligini kuzat.</p></div><span class="heading-spark">◷</span></div>
+        <div class="panel"><div class="history-title"><h2>◷ KEYINGI TO‘LOVLAR</h2><span class="pill" id="upcomingCount">—</span></div><div id="upcomingList" class="dim">Firebase ulanmoqda...</div><small>Faqat sana va navbatdagi to‘lov summasi belgilangan qarzlar.</small></div>
+        <div class="monthly-box" id="monthlyBox"><div class="monthly-label">[ SHU OYLIK TO‘LOV ]</div><div class="monthly-amount" id="monthlyAmount">Yuklanmoqda...</div><div class="monthly-sub" id="monthlySub"></div><div class="monthly-trend flat" id="monthlyTrend"></div><div class="monthly-breakdown" id="monthlyBreakdown"></div></div>
+        <div class="note-line">Sana yoki navbatdagi to‘lovni o‘zgartirish uchun <button type="button" data-go="debts">Qarzlar</button> bo‘limida EDIT ni bos.</div>
+      </section>
+      <section class="tab-page" id="page-history" role="tabpanel" aria-label="To‘lovlar tarixi" hidden>
+        <div class="page-heading"><div><div class="eyebrow">/ ACTIVITY</div><h2>Tarix va arxiv</h2><p>Operatsiyalar qaydi va to‘liq yopilgan qarzlar shu yerda.</p></div><span class="heading-spark">↶</span></div>
+        <div class="history-panel"><div class="history-title"><b>📊 OPERATSIYALAR TARIXI</b><span class="pill" id="historyCount">—</span></div><div id="paymentHistory" style="margin-top:10px">Yuklanmoqda...</div></div>
+        <div class="history-panel"><b>✅ YOPILGAN QARZLAR</b><div id="closedDebts" style="margin-top:10px">Yuklanmoqda...</div></div>
+      </section>
+      <section class="tab-page" id="page-goal" role="tabpanel" aria-label="Qarzdan chiqish maqsadi" hidden>
+        <div class="page-heading"><div><div class="eyebrow">/ TARGET</div><h2>Moliyaviy maqsad</h2><p>2026-yil oxirigacha qarzlarni 90% kamaytirish yo‘lidagi progress.</p></div><span class="heading-spark">◎</span></div>
+        <div class="panel" id="goalPanel"><div class="history-title"><h2>◎ 2026 DEKABR · 90% MAQSAD</h2><span class="pill" id="goalTag">KUTILMOQDA</span></div><div class="progress-track"><div class="progress-fill" id="goalFill"></div></div><div class="panel-row"><small id="goalDetail">Boshlang‘ich qarz miqdorini belgilash kerak</small><strong id="goalPercent">—</strong></div><small>Hisob real qarzlar o‘zgarishiga asoslanadi. Yangi qarz ham umumiy qoldiqqa qo‘shiladi.</small></div>
+        <button class="primary-action" id="btnGoal" type="button">◎ MAQSADNI SOZLASH</button>
+        <div class="note-line">Boshlang‘ich qarz bazasini bir marta belgilab qo‘y. U o‘zgarsa, progress qayta hisoblanadi.</div>
+      </section>
+      <section class="tab-page" id="page-settings" role="tabpanel" aria-label="Sozlamalar" hidden>
+        <div class="page-heading"><div><div class="eyebrow">/ SETTINGS</div><h2>Sozlamalar</h2><p>Saqlash, tiklash va ma’lumotlaring xavfsizligini boshqarish.</p></div><span class="heading-spark">⚙</span></div>
+        <div class="panel settings-group"><h2>◈ ZAXIRA NUSXA</h2><p class="help-copy">Firebase’dagi qarzlaringning nusxasini saqla. Tiklash mavjud ma’lumotlar ustiga yozadi.</p><div class="settings-actions"><button class="toolbtn" id="btnBackup">↓ BACKUP OLISH</button><button class="toolbtn warn" id="btnRestore">↑ BACKUP TIKLASH</button></div></div>
+        <div class="panel settings-group"><h2>♢ FIREBASE XAVFSIZLIGI</h2><p class="help-copy">Google hisob bilan kirish holati, qoidalar namunasi va ma’lumotlarni himoyalash bo‘yicha ogohlantirishlar.</p><button class="toolbtn" id="btnSecurity">♢ XAVFSIZLIK SOZLAMALARI</button></div>
+        <div class="panel settings-group"><h2>◈ MUSTAQIL SAHIFA</h2><p class="help-copy">Qarzlarim alohida ishlaydi. Control Center yoki Umumiy panel ichiga qo‘shilmagan. Ularga o‘tish uchun tepadagi “Tashqi o‘tishlar” havolalaridan foydalan.</p></div>
+        <div class="note-line">Eslatma: faqat sahifadagi login tugmasi yetarli emas. Himoya Firebase Database Rules orqali qo‘yiladi.</div>
+      </section>
+    </main>
+  </div>
+</div>
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">QARZ QO'SHISH</h3>
+    <div class="form-group">
+      <label>Bo'lim</label>
+      <select id="inputSection"></select>
+    </div>
+    <div class="form-group">
+      <label>Nomi</label>
+      <input type="text" id="inputName" placeholder="Masalan: Korzinka">
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Asosiy summa (so'm)</label><input type="number" id="inputAmount" step="0.01" min="0" placeholder="100000"></div>
+      <div class="form-group"><label>Kunlik penya foizi (%)</label><input type="number" id="inputPenaltyRate" min="0" max="100" step="0.0001" placeholder="Masalan: 0.5"></div>
+    </div>
+    <div class="form-grid">
+      <div class="form-group"><label>Joriy penya (so'm)</label><input type="number" id="inputPenaltyAmount" min="0" step="0.01" placeholder="Masalan: 25000"></div>
+      <div class="form-group"><label>Penya boshlanish sanasi</label><input type="date" id="inputPenaltyStart"></div>
+    </div>
+    <div class="penalty-preview" id="penaltyLivePreview" aria-live="polite"><div class="preview-title">◈ QARZ TARKIBI</div></div>
+    <div class="form-grid">
+      <div class="form-group"><label>Keyingi to‘lov sanasi</label><input type="date" id="inputDate"></div>
+      <div class="form-group"><label>Navbatdagi to‘lov (so‘m)</label><input type="number" id="inputNextAmount" min="0" step="0.01" placeholder="Masalan: 879000"></div>
+    </div>
+    <div class="form-group"><label>Qarz turi</label><select id="inputKind"><option value="bank">Bank / servis</option><option value="personal">Shaxsiy / oilaviy</option></select></div>
+    <div class="help-copy penalty-note" id="penaltyEditHint" hidden></div>
+    <div class="form-group"><label>Izoh / kimga qarz (ixtiyoriy)</label><input type="text" id="inputNote" maxlength="180" placeholder="Masalan: Oyimdan olingan yordam"></div>
+    <div class="help-copy">Penya — asosiy qarzdan kuniga belgilangan % miqdorida, oddiy (murakkab emas) usulda hisoblanadi. Sananing o‘zi uchun penya qo‘shilmaydi; ertasi kuni 1 kun hisoblanadi. Bankning haqiqiy hisob-kitobi boshqacha bo‘lishi mumkin.</div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btnCancel">BEKOR</button>
+      <button class="btn-save" id="btnSave">SAQLASH</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="restoreFile" accept=".json,application/json" hidden>
+<div class="modal-overlay" id="goalOverlay"><div class="modal"><h3>◎ 90% MAQSADNI SOZLASH</h3>
+  <div class="form-group"><label>Boshlang‘ich qarz bazasi (so‘m)</label><input type="number" min="0.01" step="0.01" id="baselineInput" placeholder="Bugungi jami qoldiq"></div>
+  <div class="form-group"><label>Yakuniy sana</label><input type="date" id="goalDateInput" value="2026-12-31"></div>
+  <div class="help-copy">Boshlang‘ich bazani bir marta belgilab qo‘y. Qarz qo‘shsang yoki penya oshsa, progress ham kamayishi mumkin. Bu avtomatik bank ma’lumoti emas.</div>
+  <div class="modal-btns"><button class="btn-cancel" id="goalCancel">YOPISH</button><button class="btn-save" id="goalSave">SAQLASH</button></div></div></div>
+<div class="modal-overlay" id="securityOverlay"><div class="modal"><h3>♢ FIREBASE XAVFSIZLIGI</h3>
+  <div id="securityStatus" class="help-copy"></div><div class="toolstrip"><button class="toolbtn" id="btnGoogleLogin">GOOGLE BILAN KIRISH</button><button class="toolbtn warn" id="btnSignOut">CHIQISH</button></div>
+  <div class="help-copy">⚠ Faqat HTML'dagi tugma ma’lumotni himoya qilmaydi. Firebase Console'da Authentication → Google provayderini yoqish, authorized domainni qo‘shish va Database Rules'ni sozlash shart. Boshqa loyihalar ham shu Firebase bazasidan foydalansa, umumiy qoidalarni o‘zgartirishdan oldin ularni tekshir.</div>
+  <div class="toolstrip"><button class="toolbtn" id="btnCopyRules">QOIDALAR NAMUNASINI NUSXALASH</button></div>
+  <div class="help-copy">Qoidalar shabloni faqat shu sahifadagi 7 yo‘lga tegishli; yuqoridagi <code>.read:true</code> yoki <code>.write:true</code> uni bekor qilishi mumkin. Console'ga qo‘llashdan oldin UID va boshqa ilovalarga ta’sirini tekshir.</div>
+  <div class="modal-btns"><button class="btn-cancel" id="securityClose">YOPISH</button></div></div></div>
+<div class="toast" id="toast"></div>
+
+<div class="modal-overlay" id="secModalOverlay">
+  <div class="modal">
+    <h3>BO'LIMLARNI BOSHQARISH</h3>
+    <div id="secListContainer"></div>
+    <div class="add-sec-row">
+      <input type="color" id="newSecColor" value="#0ff">
+      <input type="text" id="newSecName" placeholder="Yangi bo'lim nomi">
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" id="btnSecClose">YOPISH</button>
+      <button class="btn-save" id="btnSecAdd">+ QO'SHISH</button>
+    </div>
+    <div class="sec-hint">Ichida qarzi bor bo'limni o'chirib bo'lmaydi</div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getDatabase, ref, set, push, remove, onValue, update, get, runTransaction } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBRAXmQ98Akn4ZX4dJZ1RUPOQ5Zvl9lR6k",
+  authDomain: "moliyaviy-erkinlik.firebaseapp.com",
+  databaseURL: "https://moliyaviy-erkinlik-default-rtdb.firebaseio.com",
+  projectId: "moliyaviy-erkinlik",
+  storageBucket: "moliyaviy-erkinlik.firebasestorage.app",
+  messagingSenderId: "404181581489",
+  appId: "1:404181581489:web:2945fa8e654363e4952c90"
+};
+const app=initializeApp(firebaseConfig);
+const db=getDatabase(app);
+const auth=getAuth(app);
+const $=id=>document.getElementById(id);
+const DEFAULT_SECTIONS=[
+ {id:'uzum',name:'🏦 UZUM BANK',color:'#00ff88'},
+ {id:'payme',name:'📱 PAYME',color:'#ff6b00'},
+ {id:'yengil',name:'💰 YENGIL KREDIT',color:'#ff2255'},
+ {id:'paylater',name:'💳 PAY LATER',color:'#cc44ff'},
+ {id:'tebo',name:'🛵 TEBO SKUTER',color:'#00ccff'},
+ {id:'boshqa',name:'📦 BOSHQA',color:'#ffdd00'}
+];
+const PATHS=['qarzlar','qarzSections','qarzArchive','qarzEvents','oylikTarix','qarzSettings'];
+let SECTIONS=[], liveData={}, archiveData={}, legacyEvents={}, settings={}, secRenaming=null, openSections={}, editState=null;
+let busy=false, firstSections=true, loadErrors=new Set();
+const money=n=>Math.round((Number(n)+Number.EPSILON)*100)/100;
+const validMoney=n=>typeof n==='number'&&Number.isFinite(n)&&n>=0&&n<=1e12;
+const fmt=n=>(Number(n)||0).toLocaleString('ru-RU',{minimumFractionDigits:0,maximumFractionDigits:2})+" so'm";
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shortDate=s=>s?new Date(s+'T12:00:00').toLocaleDateString('uz-UZ',{day:'numeric',month:'short',year:'numeric'}):'Belgilanmagan';
+const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
+const dayDiff=s=>s?Math.round((new Date(s+'T12:00:00')-new Date(today()+'T12:00:00'))/86400000):Infinity;
+const sectionName=id=>SECTIONS.find(s=>s.id===id)?.name||id;
+const allDebts=()=>Object.entries(liveData).flatMap(([sid,values])=>Object.entries(values||{}).filter(([_,v])=>v&&typeof v==='object').map(([key,d])=>({...d,_sec:sid,_key:key}))).filter(d=>d.status!=='closed');
+const closedDebts=()=>Object.entries(liveData).flatMap(([sid,values])=>Object.entries(values||{}).filter(([_,v])=>v?.status==='closed').map(([key,d])=>({...d,_sec:sid,_key:key,_v2:true})))
+  .concat(Object.entries(archiveData).flatMap(([sid,v])=>Object.entries(v||{}).filter(([_,d])=>d&&typeof d==='object').map(([key,d])=>({...d,_sec:sid,_key:key,_v2:false}))));
+// Date-only arithmetic uses Uzbekistan civil days, not 24-hour intervals.
+// This avoids DST and timezone drift in the daily penalty calculation.
+const penaltyToday=()=>{
+ const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Tashkent',year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(new Date());
+ const v=Object.fromEntries(parts.filter(p=>p.type!=='literal').map(p=>[p.type,p.value]));
+ return `${v.year}-${v.month}-${v.day}`;
+};
+const validDay=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s)&&!Number.isNaN(Date.parse(s+'T00:00:00Z'))&&new Date(s+'T00:00:00Z').toISOString().slice(0,10)===s;
+const ordinal=s=>Date.parse(s+'T00:00:00Z')/86400000;
+const wholeDays=(from,to)=>validDay(from)&&validDay(to)?Math.max(0,Math.round(ordinal(to)-ordinal(from))):0;
+const debtPrincipal=d=>{const p=Number(d?.principalAmount); if(validMoney(p))return money(p); const pen=Number(d?.penaltyAmount||0);return money(Math.max(0,Number(d?.amount||0)-(validMoney(pen)?pen:0)));};
+const debtPenalty=d=>{const n=Number(d?.penaltyAmount||0);return validMoney(n)?money(n):0;};
+const debtPenaltyRate=d=>{const n=Number(d?.penaltyRate||0);return validMoney(n)&&n<=100?n:0;};
+const oneDayPenalty=d=>money(debtPrincipal(d)*debtPenaltyRate(d)/100);
+function pendingPenalty(d,onDate=penaltyToday()){
+ const rate=debtPenaltyRate(d),start=d?.penaltyStartDate,through=d?.penaltyAppliedThrough;
+ if(!(rate>0)||!validDay(start))return {days:0,amount:0,daily:0,anchor:null};
+ const anchor=validDay(through)&&through>start?through:start;
+ const days=wholeDays(anchor,onDate);
+ const daily=oneDayPenalty(d);
+ return {days,amount:money(daily*days),daily,anchor};
+}
+const effectiveAmount=d=>money(Number(d?.amount||0)+pendingPenalty(d).amount);
+const total=()=>money(allDebts().reduce((s,d)=>s+effectiveAmount(d),0));
+// Converts pending displayed accrual to a committed balance inside a Firebase transaction.
+// No repeated writes happen simply by opening/refreshing the webpage.
+function crystallizePenalty(cur,onDate=penaltyToday()){
+ const pending=pendingPenalty(cur,onDate);
+ const after={...cur};
+ if(pending.amount>0){
+  after.amount=money(Number(cur.amount||0)+pending.amount);
+  after.penaltyAmount=money(debtPenalty(cur)+pending.amount);
+ }
+ if(pending.days>0)after.penaltyAppliedThrough=onDate;
+ return {after,pending};
+}
+const colorFor=id=>SECTIONS.find(s=>s.id===id)?.color||'#0ff';
+const safeColor=c=>/^#[\da-fA-F]{6}$/.test(c||'')?c:'#00ffff';
+const rgba=(hex,a)=>{const c=safeColor(hex);return `rgba(${parseInt(c.slice(1,3),16)},${parseInt(c.slice(3,5),16)},${parseInt(c.slice(5,7),16)},${a})`};
+function toast(t){const el=$('toast');el.textContent=t;el.className='toast show';setTimeout(()=>el.className='toast',2800)}
+function error(e){console.error(e);toast('⚠ Xatolik: '+(e?.code||e?.message||'Tekshiring').toString().slice(0,90))}
+function modal(id,open){$(id).classList.toggle('open',!!open)}
+function busyButton(id,val){const b=$(id);if(b)b.disabled=!!val}
+function render(){
+ const debts=allDebts(), sum=total();
+ $('totalAmount').textContent=fmt(sum);$('activeCount').textContent=debts.length+' ta';
+ $('personalTotal').textContent=fmt(debts.filter(d=>d.kind==='personal').reduce((s,d)=>s+effectiveAmount(d),0));
+ renderSections(debts);renderUpcoming(debts);renderGoal(sum);renderHistory();renderArchive();
+}
+function renderSections(debts){
+ const container=$('sectionsContainer');container.replaceChildren();
+ SECTIONS.forEach(sec=>{
+ const filtered=debts.filter(d=>{const f=$('debtFilter').value;return f==='all'||(f==='personal'?d.kind==='personal':d.kind!=='personal')});
+ const items=filtered.filter(d=>d._sec===sec.id), subt=items.reduce((s,d)=>s+effectiveAmount(d),0),opened=!!openSections[sec.id];
+ if($('debtFilter').value!=='all'&&!items.length)return;
+ const outer=document.createElement('div');outer.className='section';outer.style.border='1px solid '+rgba(sec.color,.27);
+ const h=document.createElement('div');h.className='section-header';h.dataset.toggle=sec.id;h.style.background=rgba(sec.color,.06);
+ h.innerHTML=`<span class="section-title" style="color:${sec.color}">${esc(sec.name)}</span><span style="display:flex;gap:9px;align-items:center"><span style="font-size:12px;color:${sec.color}">${esc(fmt(subt))}</span><span class="chevron ${opened?'open':''}">▼</span></span>`;
+ const body=document.createElement('div');body.className='section-body'+(opened?' open':'');
+ if(!items.length)body.innerHTML='<div class="empty">[ FAOL QARZ YO‘Q ]</div>';
+ items.forEach(d=>{
+ const el=document.createElement('div');el.className='debt-item';el.style.setProperty('--ic',sec.color);
+ const note=d.note?`<div class="debt-meta">${esc(d.note)}</div>`:'';
+ const due=d.date?`<span class="debt-date ${dayDiff(d.date)<=7?'urgent':dayDiff(d.date)<=20?'soon':'later'}">${esc(shortDate(d.date))}</span>`:'';
+ const next=validMoney(Number(d.nextAmount))&&Number(d.nextAmount)>0?`<div class="debt-meta">Keyingi to‘lov: ${esc(fmt(d.nextAmount))}</div>`:'<div class="debt-meta">Navbatdagi to‘lov belgilanmagan</div>';
+ const principal=debtPrincipal(d),pen=debtPenalty(d),rate=debtPenaltyRate(d),pending=pendingPenalty(d);
+ const hasPen=rate>0||pen>0||pending.days>0;
+ const penMeta=hasPen?`<div class="penalty-breakdown">
+  <div class="penalty-metric"><small>ASOSIY QARZ</small><strong>${esc(fmt(principal))}</strong></div>
+  <div class="penalty-metric"><small>YOZILGAN PENYA</small><strong>${esc(fmt(pen))}</strong></div>
+  <div class="penalty-metric warning"><small>YANGI PENYA · ${pending.days} KUN</small><strong>+${esc(fmt(pending.amount))}</strong></div>
+ </div><div class="penalty-rate-mini">${rate>0?`◷ ${esc(String(rate))}% / kun · 1 kun ≈ ${esc(fmt(pending.daily))} · ${validDay(d.penaltyStartDate)?esc(shortDate(d.penaltyStartDate)):'Boshlanish sanasi belgilanmagan'}`:'◷ Avtomatik penya o‘chirilgan'}</div>`:'';
+ const unconfigured=rate>0&&!validDay(d.penaltyStartDate);
+ const noteMissing=unconfigured?'<div class="penalty-footnote pending">⚠ Boshlanish sanasi belgilanmagan. EDIT orqali sanani kiriting — ungacha avtomatik penya yurmaydi.</div>':'';
+ const pendingChip=pending.amount>0?`<span class="penalty-chip">+ ${esc(fmt(pending.amount))} hisobiy penya · hali bazaga yozilmagan</span>`:'';
+ const apply=pending.amount>0?`<button data-action="applyPenalty" data-sec="${esc(sec.id)}" data-key="${esc(d._key)}">◷ Penyani qayd etish</button>`:'';
+ el.innerHTML=`<div class="debt-info"><div class="debt-name">${esc(d.name)} ${d.kind==='personal'?'<span class="pill">SHAXSIY</span>':''}</div><div class="debt-amount">${esc(fmt(effectiveAmount(d)))}</div>${pendingChip}${due}${next}${penMeta}${noteMissing}${note}<div class="extra-actions"><button data-action="payment" data-sec="${esc(sec.id)}" data-key="${esc(d._key)}">💸 To‘lov</button><button data-action="increase" data-sec="${esc(sec.id)}" data-key="${esc(d._key)}">＋ Qo‘lda penya</button>${apply}<button data-action="close" data-sec="${esc(sec.id)}" data-key="${esc(d._key)}">✅ Yopish</button></div></div>
+ <div class="debt-actions"><button class="btn-edit" data-action="edit" data-sec="${esc(sec.id)}" data-key="${esc(d._key)}">✎ EDIT</button><button class="btn-delete" data-action="delete" data-sec="${esc(sec.id)}" data-key="${esc(d._key)}">🗑 DEL</button></div>`;
+ body.appendChild(el);
+ });
+ const add=document.createElement('button');add.className='add-btn';add.textContent='+ QARZ QO‘SHISH';add.dataset.action='add';add.dataset.sec=sec.id;body.appendChild(add);
+ outer.append(h,body);container.appendChild(outer);
+ });
+ if(!container.childElementCount){
+  const filter=$('debtFilter').value;
+  container.innerHTML=`<div class="panel empty-filter"><h2>${filter==='personal'?'SHAXSIY QARZLAR':'FILTR BO‘YICHA QARZLAR'} TOPILMADI</h2><p class="help-copy">Bu turdagi faol qarz hozircha yo‘q. Yangi qarz qo‘shish yoki “Barcha qarzlar”ga qaytish mumkin.</p><button class="add-btn" data-action="add" data-sec="${esc(SECTIONS[0]?.id||'boshqa')}">+ YANGI QARZ QO‘SHISH</button></div>`;
+ }
+}
+function renderUpcoming(debts){
+ const withDue=debts.filter(d=>d.date&&Number(d.nextAmount)>0).sort((a,b)=>a.date.localeCompare(b.date));
+ const closest=withDue[0];
+ $('overviewDueBadge').textContent=closest?(dayDiff(closest.date)<0?'KECHIKKAN':dayDiff(closest.date)===0?'BUGUN':dayDiff(closest.date)+' KUN'):'TO‘LOV YO‘Q';
+ $('overviewDueBadge').className='pill '+(closest&&dayDiff(closest.date)<=3?'danger':'');
+ $('overviewDue').innerHTML=closest?`<div class="list-row"><div class="left"><b>${esc(closest.name)}</b><br><span class="dim">${esc(sectionName(closest._sec))} · ${esc(shortDate(closest.date))}</span></div><div class="right"><b>${esc(fmt(closest.nextAmount))}</b></div></div>`:'<span class="dim">Hali navbatdagi to‘lov belgilanmagan.</span>';
+ $('upcomingCount').textContent=withDue.length+' ta';
+ const nowMonth=today().slice(0,7), monthly=withDue.filter(d=>d.date.slice(0,7)===nowMonth);
+ const monthlySum=monthly.reduce((s,d)=>s+Number(d.nextAmount||0),0);
+ $('monthlyAmount').textContent=fmt(monthlySum);
+ $('monthlySub').textContent='Faqat navbatdagi to‘lov miqdori kiritilgan qarzlar';
+ $('monthlyTrend').textContent=debts.some(d=>!d.nextAmount)?'⚠ Ba’zi qarzlar uchun to‘lov miqdori kiritilmagan':'✓ To‘lovlar sanasi asosida';
+ $('monthlyTrend').className='monthly-trend flat';
+ $('monthlyBreakdown').innerHTML=monthly.length?monthly.map(d=>`<div class="monthly-row"><span class="monthly-row-name">${esc(d.name)}</span><span class="monthly-row-amount">${esc(fmt(d.nextAmount))}</span></div>`).join(''):'<div class="monthly-empty">[ SHU OYDA BELGILANGAN TO‘LOV YO‘Q ]</div>';
+ const rows=withDue.slice(0,8).map(d=>{const diff=dayDiff(d.date);return `<div class="list-row"><div class="left"><b>${esc(d.name)}</b><br><span class="dim">${esc(sectionName(d._sec))} · ${esc(shortDate(d.date))}</span></div><div class="right"><b>${esc(fmt(d.nextAmount))}</b><br><span class="pill ${diff<0?'danger':diff<=3?'danger':diff<=7?'':'good'}">${diff<0?'Kechikkan':diff===0?'Bugun':diff+' kun'}</span></div></div>`});
+ $('upcomingList').innerHTML=rows.length?rows.join(''):'<div class="dim">To‘lov taqvimi bo‘sh. Qarzning EDIT bo‘limida keyingi to‘lov va sanani kiriting.</div>';
+}
+function renderGoal(sum){
+ const baseline=Number(settings.goal?.baseline),target=Number(settings.goal?.target||90),date=settings.goal?.date||'2026-12-31';
+ if(!validMoney(baseline)||baseline<=0){$('goalFill').style.width='0%';$('goalTag').textContent='SOZLANMAGAN';$('goalPercent').textContent='—';$('goalDetail').textContent='◎ MAQSAD tugmasidan boshlang‘ich qarzni belgilang';return}
+ const pct=(baseline-sum)/baseline*100;
+ $('goalFill').style.width=Math.min(100,Math.max(0,pct))+'%';
+ $('goalPercent').textContent=pct.toFixed(1)+'% / '+target+'%';
+ $('goalTag').textContent=pct>=target?'BAJARILDI':shortDate(date);
+ $('goalTag').className='pill '+(pct>=target?'good':'');
+ $('goalDetail').textContent='Baza: '+fmt(baseline)+' · Qolgan: '+fmt(sum);
+}
+function eventRows(){
+ const list=[];
+ Object.entries(liveData).forEach(([sec,v])=>Object.entries(v||{}).forEach(([key,d])=>Object.entries(d?.ops||{}).forEach(([id,op])=>list.push({...op,id,sec,key,name:d.name,v2:true,closed:d.status==='closed'}))));
+ Object.entries(legacyEvents).forEach(([id,e])=>{if(e&&typeof e==='object')list.push({...e,id,sec:e.section,key:e.debtId,v2:false})});
+ return list.sort((a,b)=>String(b.at||'').localeCompare(String(a.at||'')));
+}
+function renderHistory(){
+ const rows=eventRows(), visible=rows.slice(0,30);$('historyCount').textContent=rows.length+' ta';
+ $('paymentHistory').innerHTML=visible.length?visible.map(e=>{
+  const desc=({payment:'To‘lov',increase:'Qo‘lda penya',autoPenalty:'Kunlik penya qayd etildi',undo:'Bekor qilish',close:'Yopildi',reopen:'Qayta ochildi',adjustment:'Qo‘lda tahrir'})[e.type]||e.type;
+  const latest=e.v2&&e.type!=='undo'&&e.type!=='close'&&e.type!=='reopen'&&lastUndoable(e.sec,e.key)===e.id;
+  return `<div class="list-row"><div class="left"><b>${esc(e.name||'Qarz')}</b> · ${esc(desc)}<br><span class="dim">${esc(new Date(e.at).toLocaleString('uz-UZ'))} · ${esc(fmt(e.amount||0))}</span></div><div class="right"><span class="dim">${esc(fmt(e.after??0))}</span>${latest?`<br><button class="action-mini" data-undo="${esc(e.id)}" data-sec="${esc(e.sec)}" data-key="${esc(e.key)}">↶ Qaytarish</button>`:''}</div></div>`
+ }).join(''):'<div class="dim">Hali operatsiya qayd etilmagan.</div>';
+}
+function lastUndoable(sid,key){
+ const ops=liveData[sid]?.[key]?.ops||{};
+ const arr=Object.entries(ops).sort((a,b)=>String(b[1]?.at).localeCompare(String(a[1]?.at)));
+ const last=arr[0];if(!last)return null;
+ if(['payment','increase','autoPenalty'].includes(last[1]?.type))return last[0];
+ return null;
+}
+function renderArchive(){
+ const rows=closedDebts().sort((a,b)=>String(b.closedAt).localeCompare(String(a.closedAt)));
+ $('closedDebts').innerHTML=rows.length?rows.map(d=>`<div class="list-row"><div class="left"><b>${esc(d.name)}</b><br><span class="dim">${esc(shortDate((d.closedAt||'').slice(0,10)))} · ${esc(sectionName(d._sec))}</span></div><div class="right">${d._v2?`<button class="action-mini" data-reopen="1" data-sec="${esc(d._sec)}" data-key="${esc(d._key)}">↶ Qayta ochish</button>`:'<span class="pill">ESKI ARXIV</span>'}</div></div>`).join(''):'<div class="dim">Yopilgan qarzlar yo‘q.</div>';
+}
+function populateSectionSelect(){const sel=$('inputSection'),val=sel.value;sel.innerHTML=SECTIONS.map(s=>`<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('');if(SECTIONS.some(s=>s.id===val))sel.value=val}
+function renderSecManageModal(){
+ $('secListContainer').innerHTML=SECTIONS.map(s=>`<div class="sec-row" data-sid="${esc(s.id)}"><span class="sec-swatch" style="--sw:${s.color}"></span><span class="sec-row-name">${esc(s.name)}</span><input class="sec-name-input" value="${esc(s.name)}"><span class="sec-row-count">${Object.keys(liveData[s.id]||{}).length} ta</span><button class="sec-icon-btn rename" data-secaction="rename">✎</button><button class="sec-icon-btn del" data-secaction="delete">🗑</button></div>`).join('');
+}
+const NAV_PAGES=['home','debts','payments','history','goal','settings'];
+function switchPage(page,{focus=false,scroll=true,updateHash=true}={}){
+ if(!NAV_PAGES.includes(page))page='home';
+ document.querySelectorAll('.nav-tab').forEach(btn=>{
+  const active=btn.dataset.page===page;btn.classList.toggle('active',active);btn.setAttribute('aria-selected',String(active));btn.tabIndex=active?0:-1;
+  if(active&&focus)btn.focus({preventScroll:true});
+ });
+ document.querySelectorAll('.tab-page').forEach(section=>{const active=section.id==='page-'+page;section.hidden=!active;section.classList.toggle('active',active)});
+ if(updateHash&&location.hash!=='#'+page)history.replaceState(null,'','#'+page);
+ if(scroll)window.scrollTo({top:0,behavior:'instant'});
+}
+document.querySelectorAll('.nav-tab').forEach(btn=>{
+ btn.addEventListener('click',()=>switchPage(btn.dataset.page));
+ btn.addEventListener('keydown',e=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;
+  e.preventDefault();const cur=NAV_PAGES.indexOf(btn.dataset.page);
+  const index=e.key==='Home'?0:e.key==='End'?NAV_PAGES.length-1:(cur+(e.key==='ArrowRight'?1:-1)+NAV_PAGES.length)%NAV_PAGES.length;
+  switchPage(NAV_PAGES[index],{focus:true});
+ });
+});
+document.querySelectorAll('[data-go]').forEach(btn=>btn.addEventListener('click',()=>switchPage(btn.dataset.go)));
+$('shortcutAdd').addEventListener('click',()=>{
+ switchPage('debts');
+ if(SECTIONS.length)editDebt(SECTIONS[0].id);else toast('⚠ Firebase bo‘limlari yuklanishini kuting');
+});
+$('debtFilter').addEventListener('change',()=>renderSections(allDebts()));
+window.addEventListener('hashchange',()=>switchPage(location.hash.slice(1),{updateHash:false}));
+switchPage(location.hash.slice(1),{scroll:false,updateHash:false});
+updatePenaltyPreview();
+let lastPenaltyRenderDay=penaltyToday();
+function refreshPenaltyAtNewDay(){const now=penaltyToday();if(now!==lastPenaltyRenderDay){lastPenaltyRenderDay=now;render();}}
+setInterval(refreshPenaltyAtNewDay,60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshPenaltyAtNewDay()});
+window.addEventListener('focus',refreshPenaltyAtNewDay);
+
+function onLive(path,handler){onValue(ref(db,path),snap=>{loadErrors.delete(path);handler(snap.val()||{})},e=>{loadErrors.add(path);$('sectionsContainer').innerHTML='<div class="loading">⚠ FIREBASE: '+esc(e.code||e.message)+'</div>';error(e)})}
+onLive('qarzlar',x=>{liveData=x;render();renderSecManageModal()});
+onLive('qarzArchive',x=>{archiveData=x;renderArchive()});
+onLive('qarzEvents',x=>{legacyEvents=x;renderHistory()});
+onLive('qarzSettings',x=>{settings=x;renderGoal(total())});
+onLive('qarzSections',x=>{
+ if(!Object.keys(x).length&&firstSections){firstSections=false;
+   const seed={};DEFAULT_SECTIONS.forEach((s,i)=>seed[s.id]={name:s.name,color:s.color,order:i});
+   // Only create defaults if truly absent; transaction does not replace concurrent changes.
+   runTransaction(ref(db,'qarzSections'),cur=>cur&&Object.keys(cur).length?undefined:seed,{applyLocally:false}).catch(error);
+   return;
+ }
+ firstSections=false;
+ // Explicit map preserves previous ids and their names, without rewriting Firebase.
+ SECTIONS=Object.entries(x).filter(([_,s])=>s&&s.name).map(([id,s])=>({id,name:s.name,color:safeColor(s.color),order:Number(s.order??999)})).sort((a,b)=>a.order-b.order);
+ populateSectionSelect();renderSecManageModal();render();
+});
+
+async function atomicDebt(sid,key,mutate){
+ if(busy){toast('⚠ Oldingi amal yakunlanishini kuting');return false}busy=true;
+ try{
+  let reason='';
+  const result=await runTransaction(ref(db,`qarzlar/${sid}/${key}`),cur=>{
+   if(!cur||typeof cur!=='object'){reason='Qarz topilmadi';return}
+   const next=mutate(cur);if(!next){reason='Operatsiya bajarilmadi. Balans o‘zgargan bo‘lishi mumkin.';return}
+   return next;
+  },{applyLocally:false});
+  if(!result.committed){toast('⚠ '+(reason||'Saqlanmadi'));return false}
+  toast('✅ Firebase tranzaksiyasi saqlandi');return true;
+ }catch(e){error(e);return false}finally{busy=false}
+}
+async function applyAmount(sid,key,type){
+ const d=liveData[sid]?.[key];if(!d)return;
+ const pending=pendingPenalty(d);
+ const label=type==='payment'?`To‘lov summasi (so‘m). Hozirgi jami: ${fmt(effectiveAmount(d))}`:`Qo‘shimcha penya summasi (so‘m). ${pending.amount>0?'Hisobiy '+fmt(pending.amount)+' avval tasdiqlanadi.':''}`;
+ const raw=prompt(label);if(raw===null)return;
+ const amt=money(Number(raw.replace(/\s/g,'').replace(',','.')));
+ if(!validMoney(amt)||amt<=0){toast('⚠ Noto‘g‘ri summa');return}
+ const opid=push(ref(db,'qarzlar')).key,at=new Date().toISOString();
+ await atomicDebt(sid,key,cur=>{
+  if(cur.status==='closed')return;
+  const before=Number(cur.amount),beforePrincipal=debtPrincipal(cur),beforePenalty=debtPenalty(cur),beforeThrough=cur.penaltyAppliedThrough??null;
+  const {after:realized,pending:accrual}=crystallizePenalty(cur);
+  const activeTotal=Number(realized.amount);
+  if(!validMoney(activeTotal)||(type==='payment'&&amt>activeTotal))return;
+  let nextPenalty=debtPenalty(realized),nextPrincipal=debtPrincipal(realized);
+  if(type==='increase')nextPenalty=money(nextPenalty+amt);
+  else {
+   const penaltyPayment=Math.min(nextPenalty,amt);
+   nextPenalty=money(nextPenalty-penaltyPayment);
+   nextPrincipal=money(Math.max(0,nextPrincipal-(amt-penaltyPayment)));
+  }
+  const after=money(nextPrincipal+nextPenalty);
+  if(!validMoney(after))return;
+  return {...realized,amount:after,principalAmount:nextPrincipal,penaltyAmount:nextPenalty,
+   ops:{...(cur.ops||{}),[opid]:{type,amount:amt,before,after,at,accrued:accrual.amount,accruedDays:accrual.days,beforePrincipal,beforePenalty,beforeThrough,afterPrincipal:nextPrincipal,afterPenalty:nextPenalty}}};
+ });
+}
+async function applyAccruedPenalty(sid,key){
+ const d=liveData[sid]?.[key];if(!d)return;
+ const current=pendingPenalty(d);
+ if(!current.amount){toast('◷ Hozircha yozilmagan penya yo‘q');return}
+ if(!confirm(`${current.days} kun uchun ${fmt(current.amount)} hisobiy penyani Firebase balansiga yozamizmi? Bu bankdagi summani o‘zgartirmaydi.`))return;
+ const id=push(ref(db,'qarzlar')).key,at=new Date().toISOString();
+ await atomicDebt(sid,key,cur=>{
+  if(cur.status==='closed')return;
+  const before=Number(cur.amount),beforePrincipal=debtPrincipal(cur),beforePenalty=debtPenalty(cur),beforeThrough=cur.penaltyAppliedThrough??null;
+  const {after,pending}=crystallizePenalty(cur);
+  if(!pending.amount)return;
+  return {...after,ops:{...(cur.ops||{}),[id]:{type:'autoPenalty',amount:pending.amount,before,after:after.amount,at,days:pending.days,rate:debtPenaltyRate(cur),beforePrincipal,beforePenalty,beforeThrough}}};
+ });
+}
+async function undo(sid,key,opid){
+ const d=liveData[sid]?.[key],op=d?.ops?.[opid];if(!op||!confirm('Eng oxirgi to‘lov/penya operatsiyasini bekor qilasizmi? Bu bankdagi haqiqiy to‘lovni qaytarmaydi.'))return;
+ const undoId=push(ref(db,'qarzlar')).key,at=new Date().toISOString();
+ await atomicDebt(sid,key,cur=>{
+  const entries=Object.entries(cur.ops||{}).sort((a,b)=>String(b[1]?.at).localeCompare(String(a[1]?.at)));
+  if(entries[0]?.[0]!==opid||cur.status==='closed')return;
+  const saved=cur.ops[opid];if(Math.abs(Number(cur.amount)-Number(saved.after))>.005)return;
+  const beforePrincipal=Number(saved.beforePrincipal),beforePenalty=Number(saved.beforePenalty);
+  const hasSnapshot=validMoney(beforePrincipal)&&validMoney(beforePenalty);
+  const oldThrough=saved.beforeThrough??null;
+  const restored={...cur,amount:money(saved.before)};
+  if(hasSnapshot){restored.principalAmount=money(beforePrincipal);restored.penaltyAmount=money(beforePenalty);}
+  if(Object.prototype.hasOwnProperty.call(saved,'beforeThrough')){
+   if(oldThrough===null)delete restored.penaltyAppliedThrough;
+   else restored.penaltyAppliedThrough=oldThrough;
+  }
+  return {...restored,ops:{...cur.ops,[undoId]:{type:'undo',amount:saved.amount,before:saved.after,after:saved.before,at,undoOf:opid}}};
+ });
+}
+function updatePenaltyPreview(){
+ const principal=Number($('inputAmount').value||0),rate=Number($('inputPenaltyRate').value||0),pen=Number($('inputPenaltyAmount').value||0),start=$('inputPenaltyStart').value;
+ const safePrincipal=validMoney(principal)?money(principal):0;
+ const safeRate=validMoney(rate)&&rate<=100?rate:0;
+ const safePen=validMoney(pen)?money(pen):0;
+ const original=editState?liveData[editState.sid]?.[editState.key]:null;
+ const isOldActive=original&&debtPenaltyRate(original)>0&&validDay(original.penaltyStartDate);
+ // Editing a configured debt displays accrued-to-today penalty in the pen input.
+ // New plans (including old unconfigured v2.4 entries) may calculate from a selected historical start date.
+ const days=(safeRate>0&&validDay(start)&&!isOldActive)?wholeDays(start,penaltyToday()):0;
+ const daily=money(safePrincipal*safeRate/100),future=money(days*daily),overall=money(safePrincipal+safePen+future);
+ const hint=original?$('penaltyEditHint'):null;
+ if(hint){
+  hint.hidden=false;
+  hint.textContent=isOldActive?'Bugungacha hisoblangan penya joriy penya maydoniga qo‘shib ko‘rsatildi. Saqlaganda shu summa bazaga yoziladi; keyingi kunlardan yangi foiz ishlaydi. Eski penya ikki marta qo‘shilmaydi.':'Bu eski qarzda hali avtomatik hisoblash sanasi yo‘q. Sanani tanlasang, tanlangan kundan bugungacha penya hisoblab ko‘rsatiladi.';
+ }
+ if(!original&&hint)hint.hidden=true;
+ const info=safeRate>0&&!validDay(start)?'⚠ Kunlik penya ishlashi uchun boshlanish sanasini tanla.':safeRate>0?(isOldActive?'Bugun mavjud penya maydonida hisobga olingan. Ertadan keyingi kunlik o‘sish davom etadi.':'Hisob '+days+' o‘tgan kun bo‘yicha; boshlanish kuni hisoblanmaydi.'):'Kunlik penya o‘chiq. Joriy penya summasini qo‘lda kiritish mumkin.';
+ $('penaltyLivePreview').innerHTML=`<div class="preview-title">◈ QARZ TARKIBI · v2.5</div>
+  <div class="preview-line"><span>Asosiy qarz</span><b>${esc(fmt(safePrincipal))}</b></div>
+  <div class="preview-line"><span>Joriy penya</span><b>${esc(fmt(safePen))}</b></div>
+  <div class="preview-line"><span>Hozircha hisoblangan (${days} kun)</span><b>+ ${esc(fmt(future))}</b></div>
+  <div class="preview-line accent"><span>JAMI QOLDIQ</span><b>${esc(fmt(overall))}</b></div>
+  <div class="preview-info">${esc(info)}${safeRate>0?'<br>Kunlik ≈ '+esc(fmt(daily))+' · '+esc(String(safeRate))+'%/kun':''}</div>`;
+}
+['inputAmount','inputPenaltyRate','inputPenaltyAmount','inputPenaltyStart'].forEach(id=>$(id)?.addEventListener('input',()=>{
+ if(id==='inputPenaltyRate'&&Number($('inputPenaltyRate').value)>0&&!$('inputPenaltyStart').value)$('inputPenaltyStart').value=penaltyToday();
+ updatePenaltyPreview();
+}));
+
+async function closeDebt(sid,key){
+ const d=liveData[sid]?.[key];if(!d)return;
+ if(effectiveAmount(d)>0){toast('⚠ Avval asosiy qarz va penyani to‘liq yoping. Hisobiy qoldiq ham 0 bo‘lishi kerak.');return;}
+ if(!confirm('Qarzni arxivga o‘tkazish tasdiqlansinmi? Ma’lumotlar va operatsiyalar saqlanadi.'))return;
+ const closedAt=new Date().toISOString();
+ await atomicDebt(sid,key,cur=>(cur.status==='closed'||effectiveAmount(cur)>0)?undefined:{...cur,status:'closed',closedAt,amount:0,closingBalance:Number(cur.amount||0)});
+}
+async function reopenDebt(sid,key){
+ if(!confirm('Arxivdan qayta faol ro‘yxatga o‘tkazilsinmi?'))return;
+ await atomicDebt(sid,key,cur=>cur.status!=='closed'?undefined:{...cur,status:'active',amount:Number(cur.closingBalance||0),closedAt:null});
+}
+function editDebt(sid,key){
+ const d=key?liveData[sid]?.[key]:null;
+ editState=key?{sid,key,amount:Number(d?.amount||0),rate:debtPenaltyRate(d),start:d?.penaltyStartDate??'',principal:debtPrincipal(d),penalty:debtPenalty(d),through:d?.penaltyAppliedThrough??null}:null;
+ $('modalTitle').textContent=key?'QARZNI TAHRIRLASH':'YANGI QARZ QO‘SHISH';
+ $('inputSection').value=sid;$('inputSection').disabled=!!key;
+ $('inputName').value=d?.name||'';$('inputAmount').value=d?debtPrincipal(d):'';
+ $('inputDate').value=d?.date||'';$('inputNextAmount').value=d?.nextAmount??'';
+ $('inputPenaltyRate').value=d?.penaltyRate??'';$('inputPenaltyStart').value=d?.penaltyStartDate??'';
+ $('inputPenaltyAmount').value=d?money(debtPenalty(d)+pendingPenalty(d).amount):'';
+ $('inputKind').value=d?.kind||($('debtFilter').value==='personal'?'personal':'bank');$('inputNote').value=d?.note||'';
+ modal('modalOverlay',true);updatePenaltyPreview();
+}
+$('sectionsContainer').addEventListener('click',async e=>{
+ const btn=e.target.closest('button[data-action]');
+ if(!btn){const h=e.target.closest('[data-toggle]');if(h){openSections[h.dataset.toggle]=!openSections[h.dataset.toggle];render()}return}
+ const {action,sec:sid,key}=btn.dataset;
+ if(action==='add'){editDebt(sid);return}
+ if(action==='edit'){editDebt(sid,key);return}
+ if(action==='payment'||action==='increase'){await applyAmount(sid,key,action);return}
+ if(action==='applyPenalty'){await applyAccruedPenalty(sid,key);return}
+ if(action==='close'){await closeDebt(sid,key);return}
+ if(action==='delete'){
+  if(!confirm('⚠ Butunlay o‘chirish tarixni ham yo‘qotadi! Tavsiya: yopilgan qarzlarni arxivlang. Rostdan o‘chirilsinmi?'))return;
+  try{await remove(ref(db,`qarzlar/${sid}/${key}`));toast('✅ O‘chirildi')}catch(e){error(e)}
+ }
+});
+$('paymentHistory').addEventListener('click',e=>{const b=e.target.closest('button[data-undo]');if(b)undo(b.dataset.sec,b.dataset.key,b.dataset.undo)});
+$('closedDebts').addEventListener('click',e=>{const b=e.target.closest('button[data-reopen]');if(b)reopenDebt(b.dataset.sec,b.dataset.key)});
+$('btnCancel').onclick=()=>modal('modalOverlay',false);
+$('modalOverlay').onclick=e=>{if(e.target===$('modalOverlay'))modal('modalOverlay',false)};
+$('btnSave').onclick=async()=>{
+ const sid=$('inputSection').value,name=$('inputName').value.trim().slice(0,120),
+ principal=Number($('inputAmount').value),nextRaw=$('inputNextAmount').value,
+ nextAmount=nextRaw===''?null:Number(nextRaw),date=$('inputDate').value,
+ rateRaw=$('inputPenaltyRate').value,penRaw=$('inputPenaltyAmount').value,
+ rate=rateRaw===''?0:Number(rateRaw),pen=penRaw===''?0:Number(penRaw),start=$('inputPenaltyStart').value,
+ kind=$('inputKind').value,note=$('inputNote').value.trim().slice(0,180);
+ if(!name||!validMoney(principal)||!date||(nextAmount!==null&&!validMoney(nextAmount))||!validMoney(rate)||rate>100||!validMoney(pen)||!validMoney(principal+pen)){
+  toast('⚠ Nom, summa, foiz yoki sanani tekshir');return;
+ }
+ if(rate>0&&!validDay(start)){toast('⚠ Penya boshlanish sanasini belgila');return}
+ if(start&&!validDay(start)){toast('⚠ Penya sanasi noto‘g‘ri');return}
+ const now=penaltyToday();
+ const metadata={name,amount:money(principal+pen),principalAmount:money(principal),penaltyRate:rate,penaltyAmount:money(pen),penaltyStartDate:start||null,
+  date,nextAmount:nextAmount===null?null:money(nextAmount),kind,note};
+ busyButton('btnSave',true);
+ try{
+  if(editState){
+   const {sid:keysec,key}=editState;
+   const before=liveData[keysec]?.[key];if(!before)throw new Error('Qarz topilmadi');
+   const oldActive=debtPenaltyRate(before)>0&&validDay(before.penaltyStartDate);
+   // On editing an existing configured loan, settle all accrued interest up to today,
+   // then start a new calculation period from today so a rate edit cannot back-charge earlier days.
+   const checkpoint=oldActive?now:(start||null);
+   metadata.penaltyAppliedThrough=checkpoint;
+   const nextEffective=money(principal+pen);
+   const changed=Math.abs(effectiveAmount(before)-nextEffective)>.005;
+   if(changed&&!confirm(`Haqiqiy hisobiy qoldiq ${fmt(effectiveAmount(before))}, saqlanadigan asosiy + joriy penya ${fmt(nextEffective)}. Farqni qo‘lda tahrirlamoqchisanmi?`))return;
+   const opid=push(ref(db,'qarzlar')).key,at=new Date().toISOString();
+   const committed=await atomicDebt(keysec,key,cur=>{
+    if(cur.status==='closed')return;
+    // Do not silently overwrite a payment from another tab/phone while edit modal is open.
+    if(Math.abs(Number(cur.amount)-editState.amount)>.005 || debtPrincipal(cur)!==editState.principal || debtPenalty(cur)!==editState.penalty || debtPenaltyRate(cur)!==editState.rate || (cur.penaltyStartDate||'')!==editState.start || (cur.penaltyAppliedThrough??null)!==editState.through)return;
+    const ops={...(cur.ops||{})};
+    const commitDiff=Math.abs(Number(cur.amount)-metadata.amount)>.005;
+    if(commitDiff||pendingPenalty(cur).amount>0){ops[opid]={type:'adjustment',amount:money(metadata.amount-Number(cur.amount)),before:Number(cur.amount),after:metadata.amount,at,description:'Tahrir · kunlik penya sanasigacha hisoblandi',beforePrincipal:debtPrincipal(cur),beforePenalty:debtPenalty(cur),beforeThrough:cur.penaltyAppliedThrough??null};}
+    return {...cur,...metadata,ops};
+   });
+   if(!committed)return;
+  }else{
+   metadata.penaltyAppliedThrough=start||null;
+   const newRef=push(ref(db,'qarzlar/'+sid));
+   await set(newRef,{...metadata,status:'active',createdAt:new Date().toISOString()});toast('✅ Qarz qo‘shildi');
+  }
+  modal('modalOverlay',false);
+ }catch(e){error(e)}finally{busyButton('btnSave',false)}
+};
+$('btnManageSections').onclick=()=>{secRenaming=null;renderSecManageModal();modal('secModalOverlay',true)};
+$('btnSecClose').onclick=()=>modal('secModalOverlay',false);
+$('secModalOverlay').onclick=e=>{if(e.target===$('secModalOverlay'))modal('secModalOverlay',false)};
+$('secListContainer').addEventListener('click',async e=>{
+ const b=e.target.closest('button[data-secaction]');if(!b)return;
+ const row=b.closest('.sec-row'),sid=row.dataset.sid,sec=SECTIONS.find(s=>s.id===sid);if(!sec)return;
+ if(b.dataset.secaction==='rename'){
+  const input=row.querySelector('input');if(!row.classList.contains('editing')){row.classList.add('editing');b.textContent='✓';b.dataset.secaction='save';input.focus();return}
+ }
+ if(b.dataset.secaction==='save'){
+  const newName=row.querySelector('input').value.trim().slice(0,80);if(!newName){toast('⚠ Nom bo‘sh');return}
+  try{await update(ref(db,'qarzSections/'+sid),{name:newName});toast('✅ Nom yangilandi')}catch(err){error(err)}
+ }
+ if(b.dataset.secaction==='delete'){
+  if(Object.keys(liveData[sid]||{}).length||Object.keys(archiveData[sid]||{}).length){toast('⚠ Bo‘limda qarz yoki arxiv bor');return}
+  if(SECTIONS.length<=1){toast('⚠ Kamida 1 ta bo‘lim kerak');return}
+  if(!confirm('Bo‘lim o‘chirilsinmi?'))return;
+  try{await remove(ref(db,'qarzSections/'+sid));toast('✅ Bo‘lim o‘chirildi')}catch(err){error(err)}
+ }
+});
+$('btnSecAdd').onclick=async()=>{
+ const name=$('newSecName').value.trim().slice(0,80),color=$('newSecColor').value;
+ if(!name){toast('⚠ Bo‘lim nomi kerak');return}
+ const r=push(ref(db,'qarzSections'));
+ try{await set(r,{name,color,order:Math.max(0,...SECTIONS.map(s=>s.order))+1});$('newSecName').value='';toast('✅ Bo‘lim qo‘shildi')}catch(e){error(e)}
+};
+$('btnGoal').onclick=()=>{$('baselineInput').value=settings.goal?.baseline||total();$('goalDateInput').value=settings.goal?.date||'2026-12-31';modal('goalOverlay',true)};
+$('goalCancel').onclick=()=>modal('goalOverlay',false);
+$('goalSave').onclick=async()=>{
+ const baseline=Number($('baselineInput').value),date=$('goalDateInput').value;
+ if(!validMoney(baseline)||baseline<=0||!date){toast('⚠ Baza/sanani tekshir');return}
+ if(settings.goal?.baseline&&!confirm('Maqsad bazasini o‘zgartirish progressni qayta hisoblaydi. Davom etilsinmi?'))return;
+ try{await set(ref(db,'qarzSettings/goal'),{baseline:money(baseline),target:90,date,startedAt:new Date().toISOString()});modal('goalOverlay',false);toast('✅ Maqsad saqlandi')}catch(e){error(e)}
+};
+
+// Backup is read-only: get() fetches the latest server snapshot, not a guessed local copy.
+$('btnBackup').onclick=async()=>{
+ busyButton('btnBackup',true);
+ try{
+  const results=await Promise.all(PATHS.map(async p=>[p,(await get(ref(db,p))).val()]));
+  const payload={format:'qarzlar-v2.2',exportedAt:new Date().toISOString(),projectId:firebaseConfig.projectId,paths:Object.fromEntries(results)};
+  const data=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(data),a=document.createElement('a');a.href=url;a.download='qarzlar-backup-'+today()+'.json';document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),2000);toast('✅ Zaxira yuklandi');
+ }catch(e){error(e)}finally{busyButton('btnBackup',false)}
+};
+$('btnRestore').onclick=()=>$('restoreFile').click();
+$('restoreFile').onchange=async e=>{
+ const file=e.target.files?.[0];if(!file)return;
+ try{
+  if(file.size>5*1024*1024)throw new Error('Backup fayli 5 MB dan katta');
+  const payload=JSON.parse(await file.text());
+  if(payload?.format!=='qarzlar-v2.2'||payload.projectId!==firebaseConfig.projectId||!payload.paths||!PATHS.every(p=>Object.hasOwn(payload.paths,p)))throw new Error('Mos zaxira fayli emas');
+  const patch={};
+  for(const p of PATHS){const v=payload.paths[p];if(v!==null&&(typeof v!=='object'||Array.isArray(v)))throw new Error('Zaxira tuzilishi noto‘g‘ri: '+p);patch[p]=v}
+  if(!confirm('⚠ DIQQAT: tiklash joriy Firebase ma’lumotlarini zaxiradagi holat bilan ALMASHTIRADI! Oldin yangi backup saqlaganingga ishonch hosil qil. Davom etilsinmi?'))return;
+  if(prompt('Tasdiqlash uchun TIKLASH deb yoz:')!=='TIKLASH')return;
+  // One atomic multi-path update. Must not overwrite unrelated Firebase app paths.
+  await update(ref(db),patch);toast('✅ Backup tiklandi');
+ }catch(err){error(err)}finally{e.target.value=''}
+};
+
+onAuthStateChanged(auth,user=>{
+ $('securityStatus').textContent=user?'Google akkaunt: '+(user.email||'Kirilgan')+' | UID: '+user.uid:'Google akkaunt bilan kirilmagan. Firebase qoidalari ochiq bo‘lsa, bu sahifa o‘zi ma’lumotni himoya qilolmaydi.';
+});
+$('btnSecurity').onclick=()=>modal('securityOverlay',true);
+$('securityClose').onclick=()=>modal('securityOverlay',false);
+$('btnGoogleLogin').onclick=async()=>{
+ try{await signInWithPopup(auth,new GoogleAuthProvider());toast('✅ Google kirish bajarildi')}
+ catch(e){if(['auth/popup-blocked','auth/operation-not-supported-in-this-environment'].includes(e.code)){try{await signInWithRedirect(auth,new GoogleAuthProvider())}catch(err){error(err)}}else{error(e)}}
+};
+$('btnSignOut').onclick=async()=>{try{await signOut(auth);toast('Google akkauntdan chiqildi')}catch(e){error(e)}};
+$('btnCopyRules').onclick=async()=>{
+ const uid=auth.currentUser?.uid;
+ if(!uid){toast('⚠ Avval Google bilan kiring');return}
+ const rules={rules:{}};
+ PATHS.forEach(p=>rules.rules[p]={'.read':`auth != null && auth.uid === '${uid}'`,'.write':`auth != null && auth.uid === '${uid}'`});
+ const str=JSON.stringify(rules,null,2);
+ try{await navigator.clipboard.writeText(str);toast('✅ Namuna nusxalandi. Console’da ehtiyotkorlik bilan tekshir!')}catch(e){prompt('Qoidalar namunasi (nusxala):',str)}
+};
+</script>
+</body>
+</html>
